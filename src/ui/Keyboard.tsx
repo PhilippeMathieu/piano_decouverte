@@ -8,6 +8,8 @@ export interface KeyboardProps {
   marks?: number[];
   /** Les marques clignotent doucement (la note à jouer). */
   glow?: boolean;
+  /** Marque neutre (gris + flèche) : pour ne pas donner la réponse par la couleur. */
+  neutral?: boolean;
   names?: boolean | number[];
   colors?: boolean;
   groups?: 2 | 3 | 'both';
@@ -67,7 +69,8 @@ export function Keyboard(p: KeyboardProps) {
         const c = colorOf(m);
         return (
           <g key={m} class={p.onPress ? 'tap' : ''} onPointerDown={press(m)}>
-            <rect class={'w' + flashCls(m)} x={x} y={0} width={WW} height={WH} rx={0.12} style={lit ? { fill: c } : undefined} />
+            <rect class={'w' + flashCls(m)} x={x} y={0} width={WW} height={WH} rx={0.12} style={lit ? { fill: p.neutral ? '#c3cbe0' : c } : undefined} />
+            {lit && p.neutral ? <path class="pointer" d={`M${x + 0.2} -0.55 h0.6 l-0.3 0.45 z`} fill="#1f2a5a" /> : null}
             {lit && p.glow ? <rect x={x} y={0} width={WW} height={WH} rx={0.12} fill="#fff" class="glow" opacity={0} /> : null}
             {p.colors && !lit ? <rect x={x + 0.1} y={WH - 0.35} width={WW - 0.2} height={0.22} rx={0.11} fill={c} /> : null}
             {named(m) ? (
@@ -86,7 +89,7 @@ export function Keyboard(p: KeyboardProps) {
         const lit = marks.has(m);
         return (
           <g key={m} class={p.onPress ? 'tap' : ''} onPointerDown={press(m)}>
-            <rect class={'b' + flashCls(m)} x={x} y={0} width={BW} height={BH} rx={0.08} style={lit ? { fill: colorOf(m - 1) } : undefined} />
+            <rect class={'b' + flashCls(m)} x={x} y={0} width={BW} height={BH} rx={0.08} style={lit ? { fill: p.neutral ? '#8a94b8' : colorOf(m - 1) } : undefined} />
             {lit && p.glow ? <rect x={x} y={0} width={BW} height={BH} rx={0.08} fill="#fff" class="glow" opacity={0} /> : null}
             {named(m) ? (
               <text x={x + BW / 2} y={-0.18} font-size={0.36} fill="#1f2a5a">

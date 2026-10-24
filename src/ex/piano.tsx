@@ -119,6 +119,7 @@ export interface Guide {
   left: { notes: number[]; t: number; dur: number }[];
   bpm: number;
   beats: number;
+  pickup: number;
   clef: 'sol' | 'fa' | 'grand';
   tune?: Ev[];
   leftTune?: Ev[];
@@ -132,6 +133,7 @@ export function guideOf(act: A<'sequence'> | A<'song'> | A<'chords'>): Guide {
       left: [],
       bpm: 60,
       beats: 4,
+      pickup: 0,
       clef: 'sol'
     };
   }
@@ -140,6 +142,7 @@ export function guideOf(act: A<'sequence'> | A<'song'> | A<'chords'>): Guide {
   let phrases: number[];
   let bpm = 80;
   let beats = 4;
+  let pickup = 0;
   if (act.kind === 'song') {
     const s: Song = songById(act.id);
     tune = s.tune;
@@ -147,6 +150,7 @@ export function guideOf(act: A<'sequence'> | A<'song'> | A<'chords'>): Guide {
     phrases = s.phrases;
     bpm = s.bpm;
     beats = s.beats;
+    pickup = s.pickup ?? 0;
   } else {
     tune = parseTune(act.tune, act.octave ?? 4);
     phrases = [tune.filter((e) => e.notes.length).length];
@@ -175,7 +179,7 @@ export function guideOf(act: A<'sequence'> | A<'song'> | A<'chords'>): Guide {
   }
   const all = [...steps.flatMap((s) => s.notes), ...lefts.flatMap((l) => l.notes)];
   const clef = lefts.length || (Math.min(...all) < 55 && Math.max(...all) >= 60) ? 'grand' : Math.max(...all) < 60 ? 'fa' : 'sol';
-  return { steps, left: lefts, bpm, beats, clef, tune, leftTune: left.length ? left : undefined };
+  return { steps, left: lefts, bpm, beats, pickup, clef, tune, leftTune: left.length ? left : undefined };
 }
 
 /** Clavier qui couvre toutes les notes (au moins une octave et demie, de do à mi). */
@@ -317,7 +321,16 @@ export function Guided({ act, finish }: { act: A<'sequence'> | A<'song'> | A<'ch
       ) : (
         <div style={{ width: '100%', display: 'grid', justifyItems: 'center' }}>
           <div style={{ width: '100%', maxWidth: '900px' }}>
-            <Staff clef={g.clef} items={items} rhythm beats={g.beats} colored={help === 'keys'} minWidth={24} label="La chanson" />
+            <Staff
+              clef={g.clef}
+              items={items}
+              rhythm
+              beats={g.beats}
+              firstBar={(((g.pickup - t0) % g.beats) + g.beats) % g.beats}
+              colored={help === 'keys'}
+              minWidth={24}
+              label="La chanson"
+            />
           </div>
         </div>
       )}

@@ -782,6 +782,8 @@ p {
 .kb {
   width: 100%;
   max-width: 980px;
+  /* Sur iPad en largeur, le clavier ne doit pas pousser les boutons hors de l'écran. */
+  max-height: 32vh;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
@@ -814,6 +816,14 @@ p {
   fill: none;
   stroke: var(--sun-deep);
   stroke-width: 0.12;
+}
+.kb .pointer {
+  animation: point 0.9s ease-in-out infinite;
+}
+@keyframes point {
+  50% {
+    transform: translateY(0.25px);
+  }
 }
 .kb .glow {
   animation: glow 1s ease-in-out infinite;
@@ -880,7 +890,8 @@ p {
 
 /* ------------------------------------------------------------ Main */
 .hand {
-  width: min(56vw, 260px);
+  width: min(60vw, 280px);
+  max-height: 40vh;
 }
 .hand .skin {
   fill: var(--skin);

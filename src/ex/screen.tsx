@@ -1,7 +1,7 @@
 // Questions sans piano : le clavier à l'écran, l'oreille, la lecture, les doigts, les durées.
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { Act } from '../content/types';
-import { Feedback, QProps, pick, shuffle, useAnswer } from './common';
+import { Feedback, QProps, pick, useAnswer } from './common';
 import { Keyboard } from '../ui/Keyboard';
 import { Staff } from '../ui/Staff';
 import { Hand } from '../ui/Hand';
@@ -91,7 +91,7 @@ export function Name({ act, memo, done }: QProps<A<'name'>>) {
   const [picked, setPicked] = useState<number | null>(null);
   return (
     <>
-      <Keyboard {...KB} marks={[target]} glow />
+      <Keyboard {...KB} marks={[target]} neutral />
       <NameButtons
         names={NATURAL_PC}
         right={pcOf(target)}
@@ -367,4 +367,3 @@ export function Beats({ memo, done }: QProps<A<'beats'>>) {
   );
 }
 
-export const shuffled = shuffle;

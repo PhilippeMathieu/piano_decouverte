@@ -12,6 +12,8 @@ export interface Song {
   bpm: number;
   /** Temps par mesure. */
   beats: number;
+  /** Levée : temps avant la première barre de mesure. */
+  pickup?: number;
   /** Phrases : nombre de notes jouées par phrase (pour découper l'affichage). */
   phrases: number[];
 }
@@ -27,6 +29,7 @@ function song(s: Omit<Song, 'tune' | 'left' | 'phrases'> & { tune: string[]; fin
     icon: s.icon,
     bpm: s.bpm,
     beats: s.beats,
+    pickup: s.pickup,
     tune,
     left: s.left ? parseTune(s.left, 3) : undefined,
     phrases: lines.map((l) => l.filter((e) => e.notes.length).length)
@@ -107,6 +110,7 @@ export const SONGS: Song[] = [
     icon: '🎂',
     bpm: 100,
     beats: 3,
+    pickup: 1,
     tune: ['sol,c sol,c | la, sol, do | si,2', 'sol,c sol,c | la, sol, ré | do2', 'sol,c sol,c | sol mi do | si, la,2', 'fac fac | mi do ré | do2']
   }),
   song({

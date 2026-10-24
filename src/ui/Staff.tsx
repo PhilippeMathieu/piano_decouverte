@@ -20,6 +20,8 @@ export interface StaffProps {
   rhythm?: boolean;
   /** Temps par mesure : barres de mesure (avec `rhythm`). */
   beats?: number;
+  /** Première barre de mesure (en temps, depuis le début affiché) : levée, ou phrase qui commence en cours de mesure. */
+  firstBar?: number;
   /** Têtes de notes dans la couleur de la note. */
   colored?: boolean;
   /** Nom des notes sous la portée. */
@@ -57,7 +59,7 @@ export function Staff(p: StaffProps) {
   const height = (grand ? FA_TOP + 4 : 4) + (p.names ? 6.2 : 4.4) - y0;
 
   const bars: number[] = [];
-  if (p.rhythm && p.beats) for (let b = p.beats; b < end; b += p.beats) bars.push(X0 + b * k - 0.55);
+  if (p.rhythm && p.beats) for (let b = p.firstBar || p.beats; b < end - 0.01; b += p.beats) bars.push(X0 + b * k - 0.55);
 
   const lines = (c: Clef) =>
     [0, 1, 2, 3, 4].map((l) => <line key={c + l} class="line" x1={0.2} x2={width - 0.2} y1={top(c) + l} y2={top(c) + l} />);
