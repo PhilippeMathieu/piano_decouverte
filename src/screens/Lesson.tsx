@@ -11,16 +11,19 @@ import { RhythmLine } from '../ui/RhythmLine';
 import { Mascot } from '../ui/Mascot';
 import { Missing } from './Exercise';
 import { parseRhythm } from '../core/rhythm';
-import { playMood, playNote, playRow, playTune, stopAll } from '../core/sound';
+import { playChords, playMood, playNote, playRow, playTune, stopAll } from '../core/sound';
 import { songById } from '../content/songs';
 import { playRhythm } from '../ex/rhythm';
 import { hush } from '../core/speak';
 
 function doPlay(p: Play) {
   stopAll();
-  if ('notes' in p) playRow(p.notes, p.gap ?? 0.6);
+  if ('notes' in p) {
+    const gap = p.gap ?? 0.6;
+    playRow(p.notes, gap, gap * (p.len ?? 0.95), p.vel ?? 0.6);
+  } else if ('chords' in p) playChords(p.chords, 1.1);
   else if ('chord' in p) playNote(p.chord, 1.4);
-  else if ('rhythm' in p) playRhythm(parseRhythm(p.rhythm), 72);
+  else if ('rhythm' in p) playRhythm(parseRhythm(p.rhythm), p.bpm ?? 72, { meter: p.meter, groove: p.groove });
   else if ('mood' in p) playMood(60, p.mood === 'triste');
   else {
     const s = songById(p.song);
@@ -48,7 +51,7 @@ function SlideView({ s }: { s: Slide }) {
       {s.hand ? <Hand {...s.hand} /> : null}
       {s.rhythm ? (
         <div style={{ width: 'min(100%, 640px)', display: 'grid', justifyItems: 'center' }}>
-          <RhythmLine beats={parseRhythm(s.rhythm)} />
+          <RhythmLine beats={parseRhythm(s.rhythm)} per={s.meter ?? 4} />
         </div>
       ) : null}
       {s.play ? (

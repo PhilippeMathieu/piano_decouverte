@@ -1,6 +1,8 @@
-// Les 10 étapes du parcours : de la première touche aux accords.
+// Les 18 étapes du parcours : de la première touche à la lecture en autonomie.
+// Chaque étape a aussi « Pour aller plus loin » (more) : en option, avec un autocollant spécial.
 import type { Exercise, Step, Target } from './types';
 import { NAMES, NATURAL_PC, midiOf } from '../core/music';
+import { STEPS_2 } from './steps2';
 
 const W4 = [60, 62, 64, 65, 67, 69, 71];
 const C_POS = [60, 62, 64, 65, 67];
@@ -16,7 +18,7 @@ const T = (i: number, show?: Target['show']): Target => ({
 
 const quiz = (n: number, need: number) => ({ n, need });
 
-export const STEPS: Step[] = [
+const STEPS_1: Step[] = [
   // ------------------------------------------------------------------ 1
   {
     id: 1,
@@ -462,14 +464,69 @@ export const STEPS: Step[] = [
   }
 ];
 
+/** Pour aller plus loin, étapes 1 à 10 : en option, chacun donne un autocollant spécial. */
+const MORE_1: Record<number, Exercise[]> = {
+  1: [
+    { id: 'm1-g3', title: 'Défi : les noires, sans faute', say: 'Touche une noire d’un groupe de 3. 10 sur 10 !', where: 'ecran', act: { kind: 'groups', size: 3 }, goal: quiz(10, 10), bonus: '🚀' },
+    { id: 'm1-hl', title: 'Défi : oreille fine', say: 'Plus aiguë ou plus grave ? De plus en plus proche…', where: 'ecran', act: { kind: 'highlow' }, goal: quiz(12, 11), bonus: '🎧' }
+  ],
+  2: [
+    { id: 'm2-nom', title: 'Défi : les 7 notes, sans faute', say: 'Quelle est la note qui brille ? 10 sur 10 !', where: 'ecran', act: { kind: 'name', pool: W4 }, goal: quiz(10, 10), bonus: '🌟' },
+    { id: 'm2-p-7', title: 'Défi : les 7 notes au piano', say: 'Joue la note demandée. 12 sur 12 !', where: 'piano', act: { kind: 'play', targets: [0, 1, 2, 3, 4, 5, 6].map((i) => T(i)) }, goal: quiz(12, 12), bonus: '🎯' }
+  ],
+  3: [
+    { id: 'm3-agile', title: 'Défi : doigts agiles', say: 'Do, mi, ré, fa, mi, sol… sans faute !', where: 'piano', act: { kind: 'sequence', tune: 'do mi ré fa | mi sol fa mi | ré fa mi ré | do4', hand: 'd' }, perfect: true, bonus: '🤸' }
+  ],
+  4: [
+    { id: 'm4-vite', title: 'Défi : plus vite !', say: 'Le même jeu, plus vite.', where: 'ecran', act: { kind: 'rhythm', level: 3, input: 'tap', bpm: 96 }, goal: quiz(5, 4), bonus: '⚡' },
+    { id: 'm4-oreille', title: 'Défi : quel rythme ?', say: '10 sur 10 !', where: 'ecran', act: { kind: 'rhythmear', level: 3 }, goal: quiz(10, 10), bonus: '👂' }
+  ],
+  5: [
+    { id: 'm5-lire', title: 'Défi : lecteur sans faute', say: 'Quelle est cette note ? 10 sur 10 !', where: 'ecran', act: { kind: 'read', clef: 'sol', pool: C_POS, answer: 'name' }, goal: quiz(10, 10), bonus: '📚' }
+  ],
+  6: [
+    { id: 'm6-buns', title: 'Chanson bonus : Petits pains chauds', say: 'Joue la note qui brille.', where: 'piano', act: { kind: 'song', id: 'buns', help: 'keys' }, bonus: '🥐' },
+    { id: 'm6-lune', title: 'Défi : de mémoire', say: 'Sans les notes : joue Au clair de la lune de mémoire.', where: 'piano', act: { kind: 'song', id: 'lune', help: 'none' }, bonus: '🧸' },
+    { id: 'm6-agneau', title: 'Défi : sans faute', say: 'Marie avait un agneau, sans aucune faute !', where: 'piano', act: { kind: 'song', id: 'agneau', help: 'staff' }, perfect: true, bonus: '🐑' }
+  ],
+  7: [
+    { id: 'm7-lire', title: 'Défi : clé de fa sans faute', say: 'Quelle est cette note ? 10 sur 10 !', where: 'ecran', act: { kind: 'read', clef: 'fa', pool: C_POS_LEFT, answer: 'name' }, goal: quiz(10, 10), bonus: '🐻' }
+  ],
+  8: [
+    { id: 'm8-croches', title: 'Défi : croches rapides', say: 'Le même jeu, plus vite.', where: 'ecran', act: { kind: 'rhythm', level: 4, input: 'tap', bpm: 84 }, goal: quiz(5, 4), bonus: '🏎️' },
+    { id: 'm8-etoile', title: 'Défi : Ah ! vous dirai-je, maman, de mémoire', say: 'Sans les notes, de mémoire.', where: 'piano', act: { kind: 'song', id: 'etoile', help: 'none' }, bonus: '🌠' }
+  ],
+  9: [
+    { id: 'm9-joie', title: 'Ode à la joie, 2 mains, en lisant', say: 'Lis les deux portées.', where: 'piano', act: { kind: 'song', id: 'joie-2m', help: 'staff' }, bonus: '🎼' }
+  ],
+  10: [
+    { id: 'm10-accords', title: 'Défi : accords sans faute', say: 'Do, Fa ou Sol : 8 sur 8 !', where: 'piano', act: { kind: 'chords', chords: ['Do', 'Fa', 'Sol'] }, goal: quiz(8, 8), bonus: '🎁' },
+    { id: 'm10-humeur', title: 'Défi : joyeux ou triste, 12 sur 12', say: 'Écoute l’accord. Joyeux ou triste ?', where: 'ecran', act: { kind: 'mood' }, goal: quiz(12, 12), bonus: '🎭' }
+  ]
+};
+
+export const STEPS: Step[] = [...STEPS_1.map((s) => ({ ...s, more: MORE_1[s.id] ?? s.more })), ...STEPS_2];
+
 export const CHORDS: Record<string, number[]> = {
   Do: [midiOf('do'), midiOf('mi'), midiOf('sol')],
   Fa: [midiOf('fa'), midiOf('la'), midiOf('do', 5)],
-  Sol: [midiOf('sol'), midiOf('si'), midiOf('ré', 5)]
+  Sol: [midiOf('sol'), midiOf('si'), midiOf('ré', 5)],
+  Lam: [midiOf('la'), midiOf('do', 5), midiOf('mi', 5)],
+  // Main gauche : les accords les plus proches de la position de do (la main bouge à peine).
+  'Do-g': [midiOf('do', 3), midiOf('mi', 3), midiOf('sol', 3)],
+  'Fa-g': [midiOf('do', 3), midiOf('fa', 3), midiOf('la', 3)],
+  'Sol-g': [midiOf('si', 2), midiOf('ré', 3), midiOf('sol', 3)]
 };
+/** Nom d'un accord, pour l'enfant. */
+export const chordName = (id: string) => (id === 'Lam' ? 'la mineur' : id.replace('-g', ''));
+/** Doigts de l'accord : 1, 3, 5 à droite ; 5, 3, 1 à gauche (5, 2, 1 pour Fa). */
+export const chordFingers = (id: string): number[] => (id === 'Fa-g' ? [5, 2, 1] : id.endsWith('-g') ? [5, 3, 1] : [1, 3, 5]);
 
 export const ALL_EXERCISES: (Exercise & { step: number })[] = STEPS.flatMap((s) => s.exercises.map((e) => ({ ...e, step: s.id })));
-export const exerciseById = (id: string) => ALL_EXERCISES.find((e) => e.id === id);
+/** « Pour aller plus loin » : en option. */
+export const MORE_EXERCISES: (Exercise & { step: number })[] = STEPS.flatMap((s) => (s.more ?? []).map((e) => ({ ...e, step: s.id })));
+export const exerciseById = (id: string) => ALL_EXERCISES.find((e) => e.id === id) ?? MORE_EXERCISES.find((e) => e.id === id);
+export const isMore = (id: string) => MORE_EXERCISES.some((e) => e.id === id);
 export const lessonById = (id: string) => {
   for (const s of STEPS) for (const l of s.lessons) if (l.id === id) return { ...l, step: s.id };
   return undefined;

@@ -3,25 +3,38 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Act } from '../content/types';
 import { Feedback, QProps, SelfCheck, pick, useAnswer } from './common';
 import { RhythmLine } from '../ui/RhythmLine';
-import { Beat, judge, makePattern, onsets, parseRhythm, total } from '../core/rhythm';
-import { audio, hit, now, stopAll, tick } from '../core/sound';
+import { Beat, judge, makePattern, meterOf, onsets, parseRhythm, total } from '../core/rhythm';
+import { audio, drum, hit, now, stopAll, tick } from '../core/sound';
 import { listenOnsets, startMic } from '../core/listen/mic';
 import { usesMic } from '../core/listen';
 
 type A<K extends Act['kind']> = Extract<Act, { kind: K }>;
 
-const bpmFor = (level: number) => (level >= 4 ? 66 : 72);
+const bpmFor = (level: number) => (level === 4 || level === 6 ? 66 : 72);
 
-/** Joue un rythme (avec le tic-tac) ; renvoie l'instant du premier temps. */
-export function playRhythm(beats: Beat[], bpm: number, opts: { countIn?: boolean; ticks?: boolean; hits?: boolean } = {}) {
+/** Batterie « électro » : grosse caisse sur chaque temps, caisse claire sur 2 et 4, charleston sur les croches. */
+function groove(t0: number, b: number, beats: number, meter: number) {
+  for (let i = 0; i < beats; i++) {
+    const t = t0 + i * b;
+    drum('kick', t, 0.42);
+    if (meter === 4 && i % 2 === 1) drum('snare', t, 0.3);
+    drum('hat', t, 0.16);
+    drum('hat', t + b / 2, 0.12);
+  }
+}
+
+/** Joue un rythme (avec le tic-tac, ou la batterie) ; renvoie l'instant du premier temps. */
+export function playRhythm(beats: Beat[], bpm: number, opts: { countIn?: boolean; ticks?: boolean; hits?: boolean; meter?: number; groove?: boolean } = {}) {
   const ctx = audio();
   const b = 60 / bpm;
+  const meter = opts.meter ?? 4;
   const start = now() + 0.25;
-  const pre = opts.countIn ? 4 : 0;
+  const pre = opts.countIn ? meter : 0;
   for (let i = 0; i < pre; i++) tick(start + i * b, i === 0);
   const t0 = start + pre * b;
   const len = total(beats);
-  if (opts.ticks !== false) for (let i = 0; i < len; i++) tick(t0 + i * b, false);
+  if (opts.groove) groove(t0, b, len, meter);
+  else if (opts.ticks !== false) for (let i = 0; i < len; i++) tick(t0 + i * b, i % meter === 0);
   if (opts.hits !== false) for (const o of onsets(beats)) hit(t0 + o * b);
   void ctx;
   return { start, t0, beat: b, end: t0 + len * b };
@@ -36,7 +49,8 @@ const outLatency = () => {
 export function Rhythm({ act, memo, done }: QProps<A<'rhythm'>>) {
   const src = useMemo(() => pick(memo, 'pattern', Array.from({ length: 6 }, () => makePattern(act.level))), []);
   const beats = useMemo(() => parseRhythm(src), [src]);
-  const bpm = bpmFor(act.level);
+  const bpm = act.bpm ?? bpmFor(act.level);
+  const meter = meterOf(act.level);
   const ans = useAnswer(done);
   const [phase, setPhase] = useState<'look' | 'count' | 'play' | 'check' | 'judged'>('look');
   const [count, setCount] = useState('');
@@ -58,7 +72,7 @@ export function Rhythm({ act, memo, done }: QProps<A<'rhythm'>>) {
 
   const listenFirst = () => {
     stopAll();
-    const r = playRhythm(beats, bpm);
+    const r = playRhythm(beats, bpm, { meter, groove: act.groove });
     follow(r.t0, r.beat);
   };
 
@@ -74,10 +88,10 @@ export function Rhythm({ act, memo, done }: QProps<A<'rhythm'>>) {
     taps.current = [];
     setStates([]);
     if (mic) await startMic({ echo: true });
-    const r = playRhythm(beats, bpm, { countIn: true, hits: false });
+    const r = playRhythm(beats, bpm, { countIn: true, hits: false, meter, groove: act.groove });
     setPhase('count');
     const lat = outLatency();
-    [1, 2, 3, 4].forEach((n, i) => timers.current.push(window.setTimeout(() => setCount(String(n)), (r.start + i * r.beat - now()) * 1000)));
+    Array.from({ length: meter }, (_, i) => i + 1).forEach((n, i) => timers.current.push(window.setTimeout(() => setCount(String(n)), (r.start + i * r.beat - now()) * 1000)));
     timers.current.push(
       window.setTimeout(() => {
         setCount('À toi !');
@@ -117,7 +131,7 @@ export function Rhythm({ act, memo, done }: QProps<A<'rhythm'>>) {
   return (
     <>
       <div style={{ width: '100%', display: 'grid', justifyItems: 'center' }}>
-        <RhythmLine beats={beats} states={states} now={cur} />
+        <RhythmLine beats={beats} states={states} now={cur} per={meter} />
       </div>
       {phase === 'look' ? (
         <div class="answers">
@@ -159,7 +173,7 @@ export function RhythmEar({ act, done }: QProps<A<'rhythmear'>>) {
   const [picked, setPicked] = useState<number | null>(null);
   const play = () => {
     stopAll();
-    playRhythm(parseRhythm(q.pats[q.right]), bpmFor(act.level));
+    playRhythm(parseRhythm(q.pats[q.right]), bpmFor(act.level), { meter: meterOf(act.level) });
   };
   useEffect(() => {
     const t = setTimeout(play, 350);
@@ -186,7 +200,7 @@ export function RhythmEar({ act, done }: QProps<A<'rhythmear'>>) {
             }}
             aria-label={`Rythme ${i + 1}`}
           >
-            <RhythmLine beats={parseRhythm(p)} />
+            <RhythmLine beats={parseRhythm(p)} per={meterOf(act.level)} />
           </button>
         ))}
       </div>

@@ -5,9 +5,9 @@ import { Feedback, ListenState, QProps, SelfCheck, pick, praise, useAnswer } fro
 import { useListener, usesMic } from '../core/listen';
 import { Keyboard } from '../ui/Keyboard';
 import { Staff, StaffItem } from '../ui/Staff';
-import { Ev, cPositionFinger, colorOf, isBlack, nameOf, parseTune, pcOf } from '../core/music';
+import { Ev, cPositionFinger, colorOf, isBlack, nameOf, parseTune, pcOf, withFingers } from '../core/music';
 import { playNote, playTune, stopAll } from '../core/sound';
-import { CHORDS } from '../content/steps';
+import { CHORDS, chordFingers, chordName } from '../content/steps';
 import { Song, songById } from '../content/songs';
 
 type A<K extends Act['kind']> = Extract<Act, { kind: K }>;
@@ -61,12 +61,15 @@ export function Play({ act, memo, done }: QProps<A<'play'>>) {
 
 function ChordPrompt({ name }: { name: string }) {
   const notes = CHORDS[name];
+  const f = chordFingers(name);
+  const left = name.endsWith('-g');
   return (
     <>
       <div class="prompt-note" style={{ background: colorOf(notes[0]) }}>
-        {name}
+        {chordName(name)}
+        {left ? <small style={{ display: 'block', fontSize: '0.4em' }}>main gauche</small> : null}
       </div>
-      <Keyboard from={55} to={79} marks={notes} names={notes} fingers={{ [notes[0]]: 1, [notes[1]]: 3, [notes[2]]: 5 }} />
+      <Keyboard from={left ? 43 : 55} to={left ? 64 : 79} marks={notes} names={notes} fingers={{ [notes[0]]: f[0], [notes[1]]: f[1], [notes[2]]: f[2] }} />
     </>
   );
 }
@@ -123,6 +126,8 @@ export interface Guide {
   clef: 'sol' | 'fa' | 'grand';
   tune?: Ev[];
   leftTune?: Ev[];
+  /** Nuance de chaque phrase. */
+  nuances?: ('p' | 'f')[];
 }
 
 /** Une chanson ou une suite de notes, prête à guider. */
@@ -143,6 +148,7 @@ export function guideOf(act: A<'sequence'> | A<'song'> | A<'chords'>): Guide {
   let bpm = 80;
   let beats = 4;
   let pickup = 0;
+  let nuances: Guide['nuances'];
   if (act.kind === 'song') {
     const s: Song = songById(act.id);
     tune = s.tune;
@@ -151,8 +157,9 @@ export function guideOf(act: A<'sequence'> | A<'song'> | A<'chords'>): Guide {
     bpm = s.bpm;
     beats = s.beats;
     pickup = s.pickup ?? 0;
+    nuances = s.nuances;
   } else {
-    tune = parseTune(act.tune, act.octave ?? 4);
+    tune = withFingers(parseTune(act.tune, act.octave ?? 4), act.fingers);
     phrases = [tune.filter((e) => e.notes.length).length];
   }
   const steps: GuideStep[] = [];
@@ -179,7 +186,7 @@ export function guideOf(act: A<'sequence'> | A<'song'> | A<'chords'>): Guide {
   }
   const all = [...steps.flatMap((s) => s.notes), ...lefts.flatMap((l) => l.notes)];
   const clef = lefts.length || (Math.min(...all) < 55 && Math.max(...all) >= 60) ? 'grand' : Math.max(...all) < 60 ? 'fa' : 'sol';
-  return { steps, left: lefts, bpm, beats, pickup, clef, tune, leftTune: left.length ? left : undefined };
+  return { steps, left: lefts, bpm, beats, pickup, clef, tune, leftTune: left.length ? left : undefined, nuances };
 }
 
 /** Clavier qui couvre toutes les notes (au moins une octave et demie, de do à mi). */
@@ -205,6 +212,8 @@ export function Guided({ act, finish }: { act: A<'sequence'> | A<'song'> | A<'ch
   const playing = useRef<number | null>(null);
   const [demo, setDemo] = useState<number | null>(null);
   const help = act.kind === 'song' ? act.help : 'keys';
+  /** Déchiffrer : pas d'écoute avant la fin. De mémoire : ni portée ni touches. */
+  const canListen = help !== 'read' || i >= g.steps.length;
   const step = g.steps[i];
   const end = i >= g.steps.length;
   const mic = usesMic();
@@ -212,9 +221,11 @@ export function Guided({ act, finish }: { act: A<'sequence'> | A<'song'> | A<'ch
   useEffect(() => () => stopAll(), []);
   useEffect(() => {
     if (!end) return;
+    // Déchiffrer : la récompense, c'est d'entendre la chanson qu'on vient de découvrir.
+    const reveal = help === 'read' && g.tune ? playTune(g.tune, g.bpm, { left: g.leftTune }) : 0;
     if (mic) {
-      setFb({ ok: true, msg: praise() });
-      const t = setTimeout(() => finish(mistakes, g.steps.length), 1100);
+      setFb({ ok: true, msg: reveal ? `${praise()} Écoute la chanson que tu as découverte 🎁` : praise() });
+      const t = setTimeout(() => finish(mistakes, g.steps.length), reveal ? reveal * 1000 + 600 : 1100);
       return () => clearTimeout(t);
     }
     setRating(true);
@@ -289,7 +300,7 @@ export function Guided({ act, finish }: { act: A<'sequence'> | A<'song'> | A<'ch
   const range = rangeOf(allNotes);
   const fingers: Record<number, number> = {};
   if (help === 'keys' && cur.finger && !end) fingers[cur.notes[0]] = cur.finger;
-  if (cur.chord) cur.notes.forEach((n, k) => (fingers[n] = [1, 3, 5][k]));
+  if (cur.chord) cur.notes.forEach((n, k) => (fingers[n] = chordFingers(cur.chord!)[k]));
   const leftNow = g.left.find((l) => l.t === cur.t);
 
   if (rating) {
@@ -316,8 +327,18 @@ export function Guided({ act, finish }: { act: A<'sequence'> | A<'song'> | A<'ch
 
   return (
     <>
+      {g.nuances?.[cur.phrase] ? (
+        <span class="pill" style={{ fontSize: '1.2rem' }}>
+          {g.nuances[cur.phrase] === 'p' ? '𝆏 piano : tout doux 🐭' : '𝆑 forte : bien fort 🦁'}
+        </span>
+      ) : null}
       {cur.chord ? (
         <ChordPrompt name={cur.chord} />
+      ) : help === 'none' ? (
+        <div class="stack" style={{ justifyItems: 'center', textAlign: 'center' }}>
+          <div class="big-emoji">🙈</div>
+          <p>De mémoire ! Phrase {cur.phrase + 1}.</p>
+        </div>
       ) : (
         <div style={{ width: '100%', display: 'grid', justifyItems: 'center' }}>
           <div style={{ width: '100%', maxWidth: '900px' }}>
@@ -345,7 +366,7 @@ export function Guided({ act, finish }: { act: A<'sequence'> | A<'song'> | A<'ch
         />
       ) : null}
       <div class="row" style={{ flexWrap: 'wrap', justifyContent: 'center' }}>
-        {demo === null ? (
+        {!canListen ? null : demo === null ? (
           <button class="btn small" onClick={listenAll}>
             ▶ Écouter {act.kind === 'song' ? 'la chanson' : ''}
           </button>

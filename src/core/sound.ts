@@ -25,12 +25,24 @@ export function playNote(midi: number | number[], dur = 0.9, vel = 0.6) {
   busy(t + dur);
 }
 
-/** Notes l'une après l'autre (gap secondes). */
-export function playRow(midis: number[], gap = 0.6, dur = gap * 0.95) {
+/** Notes l'une après l'autre (gap secondes) ; vel : force (une par note ou pour toutes). */
+export function playRow(midis: number[], gap = 0.6, dur = gap * 0.95, vel: number | number[] = 0.6) {
   audio();
   const t0 = now() + 0.05;
-  midis.forEach((m, i) => piano(m, t0 + i * gap, dur, 0.6));
+  midis.forEach((m, i) => piano(m, t0 + i * gap, dur, Array.isArray(vel) ? (vel[i] ?? 0.6) : vel));
   busy(t0 + midis.length * gap);
+}
+
+/** Accords l'un après l'autre (gap secondes) ; onChord(i) quand le i-ème sonne. */
+export function playChords(chords: number[][], gap = 1.1, onChord?: (i: number) => void) {
+  audio();
+  const t0 = now() + 0.05;
+  chords.forEach((c, i) => {
+    playChord(c, t0 + i * gap, gap * 0.95, 0.5, 0.012);
+    if (onChord) timers.push(window.setTimeout(() => onChord(i), (t0 + i * gap - now()) * 1000));
+  });
+  busy(t0 + chords.length * gap);
+  return chords.length * gap;
 }
 
 /**
@@ -88,3 +100,4 @@ export function hit(when: number, midi = 72) {
   piano(midi, when, 0.18, 0.7);
 }
 export { audio, now };
+export { drum } from './audio/engine';

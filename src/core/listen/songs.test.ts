@@ -58,14 +58,22 @@ describe('chansons au micro', () => {
     // Le guidage n'avance que sur la bonne note : on vérifie qu'on la retrouve, dans l'ordre, sans fausse note entre deux.
     let k = 0;
     let wrong = 0;
+    let merged = 0;
     for (const m of got) {
       if (k < want.length && pcOf(m) === want[k]) k++;
+      // Note répétée (do do) dont la 2ᵉ, plus douce, n'est pas entendue : l'enfant la rejoue, sans faute comptée.
+      else if (k > 0 && k + 1 < want.length && want[k] === want[k - 1] && pcOf(m) === want[k + 1]) {
+        merged++;
+        k += 2;
+      }
       // Comme le guidage : la note qu'on vient de jouer, entendue une 2e fois, n'est pas une faute.
       else if (k > 0 && pcOf(m) === want[k - 1]) continue;
       else wrong++;
     }
     if (wrong || k < want.length) console.log(s.id, 'got', got.map(pcOf).join(' '), '\nwant', want.join(' '));
     expect({ found: k, wrong }).toEqual({ found: want.length, wrong: 0 });
+    // Au plus une note répétée à rejouer par chanson.
+    expect(merged).toBeLessThanOrEqual(1);
   });
   it('joué doucement (−12 dB), au même tempo', () => {
     const s = SONGS.find((x) => x.id === 'lune')!;

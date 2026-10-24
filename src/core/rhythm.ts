@@ -26,14 +26,24 @@ export function onsets(r: Beat[]): number[] {
   return out;
 }
 
-/** Mesures de 4 temps possibles, par niveau (chaque niveau ajoute aux précédents). */
+/**
+ * Mesures possibles, par niveau (chaque niveau ajoute aux précédents de même mesure) :
+ * 1 à 4 et 6 en 4 temps, 5 en 3 temps (valse, blanche pointée), 6 : noire pointée et contretemps.
+ */
 const BARS: string[][] = [
   ['1 1 1 1'],
   ['2 1 1', '1 1 2', '2 2', '1 2 1'],
   ['4', '1 -1 1 1', '1 1 -1 1', '2 -1 1', '-1 1 2', '1 -1 2'],
-  ['.5 .5 1 2', '1 .5 .5 1 1', '.5 .5 .5 .5 2', '1 1 .5 .5 1', '.5 .5 1 .5 .5 1']
+  ['.5 .5 1 2', '1 .5 .5 1 1', '.5 .5 .5 .5 2', '1 1 .5 .5 1', '.5 .5 1 .5 .5 1'],
+  ['3', '2 1', '1 2', '1 1 1', '1 -1 1', '.5 .5 1 1', '2 -1'],
+  ['1.5 .5 1 1', '1 1 1.5 .5', '.5 1 .5 2', '.5 1 .5 1 1', '1.5 .5 2', '1 .5 1 .5 1']
 ];
-export const barsFor = (level: number) => BARS.slice(0, level).flat();
+/** Temps par mesure d'un niveau. */
+export const meterOf = (level: number): 3 | 4 => (level === 5 ? 3 : 4);
+export const barsFor = (level: number) =>
+  BARS.slice(0, level)
+    .filter((_, i) => meterOf(i + 1) === meterOf(level))
+    .flat();
 /** Les mesures propres au niveau (ce qu'on vient d'apprendre), pour qu'elles reviennent souvent. */
 const newBars = (level: number) => BARS[level - 1];
 

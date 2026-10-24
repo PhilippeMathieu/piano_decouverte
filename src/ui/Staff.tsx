@@ -1,6 +1,6 @@
 // Portée en SVG : clé de sol, clé de fa ou les deux ; notes seules ou avec leurs durées (chansons).
 import { GLYPHS } from './staffGlyphs';
-import { Clef, colorOf, nameOf, staffY } from '../core/music';
+import { Clef, colorOf, isBlack, nameOf, staffY } from '../core/music';
 
 export interface StaffItem {
   notes: number[];
@@ -123,6 +123,11 @@ function Note({ it, clef, x, top, rhythm, colored, names }: { it: StaffItem; cle
               stroke={hollow ? fill : '#1f2a5a'}
               stroke-width={hollow ? 0.2 : colored ? 0.06 : 0}
             />
+            {isBlack(m) ? (
+              <text x={cx - 1.05} y={y + 0.55} font-size={1.7} text-anchor="middle" fill="#1f2a5a">
+                ♯
+              </text>
+            ) : null}
             {dur === 1.5 || dur === 3 ? <circle cx={cx + 1.05} cy={Number.isInteger(ys[j]) ? y - 0.5 : y} r={0.17} fill="#1f2a5a" /> : null}
             {names ? (
               <text x={cx} y={7.4} font-size={1.2} fill={colorOf(m)} stroke="#1f2a5a" stroke-width={0.03}>

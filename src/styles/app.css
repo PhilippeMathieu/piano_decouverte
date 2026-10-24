@@ -385,31 +385,32 @@ p {
   gap: 18px;
 }
 .stop {
+  /* Décalage en zigzag ; la pierre et son étiquette ne dépassent jamais l'écran. */
+  --shift: 0%;
   display: flex;
   align-items: center;
   gap: 14px;
-  width: min(100%, 420px);
+  margin-left: var(--shift);
+  width: min(100% - var(--shift), 420px);
   padding: 0;
   border: 0;
   background: none;
   text-align: left;
 }
-.stop:nth-child(4n + 2) {
-  margin-left: 18%;
+.stop:nth-child(4n + 2),
+.stop:nth-child(4n + 4) {
+  --shift: 18%;
 }
 .stop:nth-child(4n + 3) {
-  margin-left: 36%;
-}
-.stop:nth-child(4n + 4) {
-  margin-left: 18%;
+  --shift: 36%;
 }
 @media (max-width: 560px) {
   .stop:nth-child(4n + 2),
   .stop:nth-child(4n + 4) {
-    margin-left: 10%;
+    --shift: 10%;
   }
   .stop:nth-child(4n + 3) {
-    margin-left: 20%;
+    --shift: 20%;
   }
 }
 .stone {
@@ -497,6 +498,13 @@ p {
   gap: 16px;
   margin-bottom: 18px;
 }
+.step-head > div {
+  min-width: 0;
+}
+.step-head h1 {
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
 .step-head .stone {
   width: 72px;
   height: 72px;
@@ -547,11 +555,29 @@ p {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* Pour aller plus loin : tuile « défi », avec son autocollant spécial (grisé tant qu'il n'est pas gagné). */
+.tile.more {
+  background: #fff4d6;
+  box-shadow: 0 var(--press) 0 #f1d58a;
+}
+.tile.more:active {
+  box-shadow: 0 0 0 #f1d58a;
+}
+.tile .bonus {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+.tile .bonus.off {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
 
 /* ------------------------------------------------------------ Exercice et leçon */
 .ex {
   display: grid;
   grid-template-rows: auto auto 1fr auto;
+  /* Une seule colonne, jamais plus large que l'écran (un long titre ou une rangée de boutons passe à la ligne). */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 100dvh;
   max-width: 1000px;
   margin: 0 auto;

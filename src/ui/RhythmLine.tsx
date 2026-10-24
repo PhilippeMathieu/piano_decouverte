@@ -1,4 +1,4 @@
-// Un rythme écrit sur une seule ligne : noires, blanches, rondes, croches (liées par 2) et soupirs.
+// Un rythme écrit sur une seule ligne : noires, blanches, rondes, croches (liées par 2), notes pointées et soupirs.
 import { Beat } from '../core/rhythm';
 
 export function RhythmLine({ beats, states, now, per = 4 }: { beats: Beat[]; states?: ('ok' | 'bad' | undefined)[]; now?: number; per?: number }) {
@@ -57,6 +57,7 @@ export function RhythmLine({ beats, states, now, per = 4 }: { beats: Beat[]; sta
               stroke={c}
               stroke-width={hollow ? 0.22 : 0}
             />
+            {it.b.dur === 1.5 || it.b.dur === 3 ? <circle cx={cx + 1.05} cy={Y - 0.1} r={0.18} fill={c} /> : null}
           </g>
         );
       })}

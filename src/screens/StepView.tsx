@@ -58,6 +58,33 @@ export function StepView({ id }: { id: number }) {
         ))}
       </div>
 
+      {s.more?.length ? (
+        <>
+          <div class="section-title">🚀 Pour aller plus loin</div>
+          <p class="hint" style={{ margin: '-4px 0 10px' }}>
+            En option : défis et chansons bonus. Chacun donne un autocollant spécial.
+          </p>
+          <div class="tiles">
+            {s.more.map((e) => {
+              const got = starsOf(e.id, progress) > 0;
+              return (
+                <button key={e.id} class="tile more" onClick={() => go(`#/exercice/${e.id}`)}>
+                  <div class="row">
+                    <WhereTag where={e.where} />
+                    <span class="spacer" />
+                    <span class={'bonus' + (got ? '' : ' off')} title={got ? 'Autocollant gagné' : 'Autocollant à gagner'}>
+                      {e.bonus}
+                    </span>
+                  </div>
+                  <b>{e.title}</b>
+                  <span class="goal">🎯 {goalText(e)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
+
       <div class="row" style={{ marginTop: '26px' }}>
         {prev ? (
           <button class="btn small" onClick={() => go(`#/etape/${prev.id}`)}>

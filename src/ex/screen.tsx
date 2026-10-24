@@ -8,8 +8,10 @@ import { Hand } from '../ui/Hand';
 import { RhythmLine } from '../ui/RhythmLine';
 import { NAMES, NATURAL_PC, colorOf, isBlack, nameOf, pcOf } from '../core/music';
 import { parseRhythm } from '../core/rhythm';
-import { playMood, playNote, playRow, playTune } from '../core/sound';
+import { audio, drum, now, playChords, playMood, playNote, playRow, playTune } from '../core/sound';
+import { piano as pianoAt } from '../core/audio/engine';
 import { SONGS } from '../content/songs';
+import { CHORDS, chordName } from '../content/steps';
 
 type A<K extends Act['kind']> = Extract<Act, { kind: K }>;
 const KB = { from: 48, to: 76 };
@@ -337,9 +339,11 @@ const FIGURES = [
   { r: '4', beats: 4, name: 'la ronde' },
   { r: '-1', beats: 1, name: 'le soupir' }
 ];
+/** Avec la blanche pointée (étape 12) : elle revient une fois sur deux. */
+const FIGURES_DOTTED = [...FIGURES, { r: '3', beats: 3, name: 'la blanche pointée' }, { r: '3', beats: 3, name: 'la blanche pointée' }, { r: '3', beats: 3, name: 'la blanche pointée' }];
 
-export function Beats({ memo, done }: QProps<A<'beats'>>) {
-  const fig = useMemo(() => pick(memo, 'fig', FIGURES), []);
+export function Beats({ act, memo, done }: QProps<A<'beats'>>) {
+  const fig = useMemo(() => pick(memo, 'fig', act.dotted ? FIGURES_DOTTED : FIGURES, (a, b) => a.r === b.r), []);
   const ans = useAnswer(done);
   const [picked, setPicked] = useState<number | null>(null);
   return (
@@ -348,7 +352,7 @@ export function Beats({ memo, done }: QProps<A<'beats'>>) {
         <RhythmLine beats={parseRhythm(fig.r)} per={99} />
       </div>
       <div class="answers">
-        {[1, 2, 4].map((n) => (
+        {(act.dotted ? [1, 2, 3, 4] : [1, 2, 4]).map((n) => (
           <button
             key={n}
             class={'btn big' + (picked === null ? '' : n === fig.beats ? ' ok' : n === picked ? ' no' : '')}
@@ -367,3 +371,91 @@ export function Beats({ memo, done }: QProps<A<'beats'>>) {
   );
 }
 
+
+// ------------------------------------------------------------------ Oreille : doux/fort, lié/détaché, valse/marche, fini/pas fini
+
+const CONTRAST: Record<A<'contrast'>['what'], { a: { id: string; label: string }; b: { id: string; label: string } }> = {
+  nuance: { a: { id: 'a', label: '🐭 Doux' }, b: { id: 'b', label: '🦁 Fort' } },
+  touch: { a: { id: 'a', label: '〰️ Lié' }, b: { id: 'b', label: '⚽ Détaché' } },
+  meter: { a: { id: 'a', label: '💃 Valse : 1, 2, 3' }, b: { id: 'b', label: '🥁 Marche : 1, 2, 3, 4' } },
+  cadence: { a: { id: 'a', label: '🏠 Fini' }, b: { id: 'b', label: '⏳ Pas fini' } }
+};
+
+/** Une petite mélodie au hasard, dans la position de do. */
+const littleTune = () => {
+  const out = [60 + [0, 2, 4][Math.floor(Math.random() * 3)]];
+  for (let i = 0; i < 4; i++) {
+    const cands = [60, 62, 64, 65, 67].filter((m) => m !== out[out.length - 1] && Math.abs(m - out[out.length - 1]) <= 4);
+    out.push(cands[Math.floor(Math.random() * cands.length)]);
+  }
+  return out;
+};
+
+/** Valse (basse, puis 2 accords) ou marche (basse, accord, basse, accord) : 3 mesures. */
+function playMeter(waltz: boolean, root: number) {
+  audio();
+  const b = 60 / 132;
+  const t0 = now() + 0.1;
+  const triad = [root + 12, root + 16, root + 19];
+  const per = waltz ? 3 : 4;
+  for (let i = 0; i < per * 3; i++) {
+    const t = t0 + i * b;
+    const k = i % per;
+    if (k === 0) pianoAt(root, t, b * 0.9, 0.75);
+    else if (!waltz && k === 2) pianoAt(root + 7, t, b * 0.9, 0.6);
+    else triad.forEach((m) => pianoAt(m, t, b * 0.5, 0.32));
+    if (k === 0) drum('kick', t, 0.25);
+  }
+  return per * 3 * b;
+}
+
+export function Contrast({ act, done }: QProps<A<'contrast'>>) {
+  const q = useMemo(() => ({ second: Math.random() < 0.5, tune: littleTune(), root: 48 + Math.floor(Math.random() * 5) }), []);
+  const ans = useAnswer(done);
+  const o = CONTRAST[act.what];
+  const play = () => {
+    if (act.what === 'nuance') playRow(q.tune, 0.42, 0.4, q.second ? 0.95 : 0.12);
+    else if (act.what === 'touch') playRow(q.tune, 0.42, q.second ? 0.1 : 0.46, 0.6);
+    else if (act.what === 'meter') playMeter(!q.second, q.root);
+    else {
+      const C = [48, 52, 55];
+      const F = [48, 53, 57];
+      const G = [47, 50, 55];
+      const Am = [45, 48, 52];
+      // Fini : on revient à Do. Pas fini : on s'arrête sur Sol (ou sur Fa).
+      const start = [C, Math.random() < 0.5 ? F : Am];
+      playChords(q.second ? [...start, Math.random() < 0.7 ? G : F] : [...start, G, C], 0.95);
+    }
+  };
+  return (
+    <>
+      <Replay play={play} />
+      <Choice options={[o.a, o.b]} right={q.second ? 'b' : 'a'} locked={ans.locked} onAnswer={(id) => ans.answer(id === (q.second ? 'b' : 'a'))} />
+      <Feedback fb={ans.fb} />
+    </>
+  );
+}
+
+// ------------------------------------------------------------------ Oreille : quel accord ?
+
+const CHORD_FACE: Record<string, string> = { Do: '😀', Fa: '🌤️', Sol: '🚪', Lam: '😢' };
+
+export function WhichChord({ act, memo, done }: QProps<A<'whichchord'>>) {
+  const id = useMemo(() => pick(memo, 'chord', act.chords), []);
+  const ans = useAnswer(done);
+  // Avec plus de 2 accords, on entend d'abord Do (la maison), puis l'accord mystère.
+  const play = () => (act.chords.length > 2 ? playChords([CHORDS.Do, CHORDS[id]], 1.2) : playNote(CHORDS[id], 1.4));
+  return (
+    <>
+      {act.chords.length > 2 ? <p class="hint">D’abord Do, la maison… puis l’accord mystère.</p> : null}
+      <Replay play={play} />
+      <Choice
+        options={act.chords.map((c) => ({ id: c, label: `${CHORD_FACE[c] ?? ''} ${chordName(c)}` }))}
+        right={id}
+        locked={ans.locked}
+        onAnswer={(c) => ans.answer(c === id, c === id ? undefined : `C’était ${chordName(id)}.`)}
+      />
+      <Feedback fb={ans.fb} />
+    </>
+  );
+}

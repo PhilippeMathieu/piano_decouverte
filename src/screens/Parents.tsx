@@ -1,11 +1,11 @@
 // Espace parents (on y entre en maintenant le bouton) : prénom, voix, micro, objectif du jour, remise à zéro.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { resetProgress, setSettings, totalStars, maxStars, useStore, stickers } from '../core/progress';
+import { resetProgress, setSettings, totalStars, maxStars, useStore, stickers, bonusStickers } from '../core/progress';
 import { go } from '../ui/bits';
 import { canSpeak, speak } from '../core/speak';
 import { MIC_MESSAGES, micGate, readNote, startMic, useMicLoop, useMicRelease, useMicState } from '../core/listen/mic';
 import { nameOf } from '../core/music';
-import { STEPS } from '../content/steps';
+import { MORE_EXERCISES, STEPS } from '../content/steps';
 
 /** Un bouton qu'il faut maintenir 1,5 s : l'enfant ne tombe pas dans les réglages par hasard. */
 export function HoldButton({ onDone }: { onDone: () => void }) {
@@ -172,6 +172,7 @@ function MicTest() {
 export function Stickers() {
   const { progress } = useStore();
   const got = stickers(progress);
+  const bonus = bonusStickers(progress);
   return (
     <div class="page">
       <div class="top">
@@ -191,6 +192,21 @@ export function Stickers() {
             <button key={s.id} class={'sticker-slot' + (has ? '' : ' empty')} style={{ border: 0 }} onClick={() => go(`#/etape/${s.id}`)}>
               <span>{s.sticker}</span>
               {s.title}
+            </button>
+          );
+        })}
+      </div>
+      <h2 style={{ margin: '26px 0 6px' }}>
+        Autocollants spéciaux <span class="pill">{bonus.length} / {MORE_EXERCISES.length}</span>
+      </h2>
+      <p style={{ marginBottom: '16px' }}>Réussis un défi ou une chanson bonus (« Pour aller plus loin ») pour les gagner.</p>
+      <div class="sticker-book">
+        {MORE_EXERCISES.map((e) => {
+          const has = bonus.includes(e.bonus!);
+          return (
+            <button key={e.id} class={'sticker-slot' + (has ? '' : ' empty')} style={{ border: 0 }} onClick={() => go(`#/exercice/${e.id}`)}>
+              <span>{e.bonus}</span>
+              {e.title}
             </button>
           );
         })}

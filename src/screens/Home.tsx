@@ -1,4 +1,4 @@
-// Accueil : bonjour, la prochaine chose à faire, et le chemin des 10 étapes.
+// Accueil : bonjour, la prochaine chose à faire, et le chemin des 18 étapes.
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { STEPS } from '../content/steps';
 import { doneToday, nextThing, stepDone, stepShare, streak, totalStars, useStore } from '../core/progress';

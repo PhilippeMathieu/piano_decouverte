@@ -2,11 +2,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Act, Exercise } from '../content/types';
 import { STEPS, exerciseById } from '../content/steps';
-import { after, getSettings, playStars, quizStars, recordResult, setSettings, useStore } from '../core/progress';
+import { after, finalStars, getSettings, playStars, quizStars, recordResult, setSettings, useStore } from '../core/progress';
 import { Say, WhereTag, go } from '../ui/bits';
 import { Mascot } from '../ui/Mascot';
 import { QProps } from '../ex/common';
-import { Beats, Contour, Find, Finger, Groups, HighLow, Mood, Name, Read, WhichSong } from '../ex/screen';
+import { Beats, Contour, Contrast, Find, Finger, Groups, HighLow, Mood, Name, Read, WhichChord, WhichSong } from '../ex/screen';
+import { Echo, Improv } from '../ex/create';
 import { Rhythm, RhythmEar } from '../ex/rhythm';
 import { Chord, Guided, Play } from '../ex/piano';
 import { audio, stopAll } from '../core/sound';
@@ -29,14 +30,20 @@ const QUIZ: Partial<Record<Act['kind'], (p: QProps<any>) => preact.JSX.Element>>
   rhythm: Rhythm,
   rhythmear: RhythmEar,
   play: Play,
-  chords: Chord
+  chords: Chord,
+  contrast: Contrast,
+  whichchord: WhichChord,
+  echo: Echo,
+  improv: Improv
 };
 
 export const goalText = (ex: Exercise) => {
   if (ex.goal) {
-    const unit = ex.act.kind === 'rhythm' ? 'rythmes réussis' : 'bonnes réponses';
+    if (ex.act.kind === 'improv') return ex.act.mode === 'libre' ? 'Jouer au moins 8 notes, sur les noires' : `${ex.goal.need} réponses sur ${ex.goal.n}`;
+    const unit = ex.act.kind === 'rhythm' ? 'rythmes réussis' : ex.act.kind === 'echo' ? 'échos réussis' : 'bonnes réponses';
     return `${ex.goal.need} ${unit} sur ${ex.goal.n}`;
   }
+  if (ex.perfect) return 'Jouer sans faute';
   return ex.act.kind === 'chords' ? 'Jouer tous les accords' : ex.act.kind === 'song' ? 'Jouer la chanson jusqu’au bout' : 'Jouer toutes les notes';
 };
 
@@ -69,9 +76,10 @@ export function ExerciseView({ id }: { id: string }) {
     setRun((r) => r + 1);
     setPhase('run');
   };
-  const end = (stars: number, detail: string) => {
+  const end = (raw: number, detail: string) => {
+    const stars = finalStars(ex, raw);
     const r = recordResult(ex, stars);
-    setOutcome({ stars, sticker: r.sticker, detail });
+    setOutcome({ stars, sticker: r.sticker ?? r.bonus, detail });
     setPhase('done');
   };
   const onAnswer = (ok: boolean) => {
@@ -174,7 +182,7 @@ function Result({ ex, outcome, again, next, back }: { ex: Exercise; outcome: { s
       {outcome.sticker ? (
         <div class="sticker-won">
           <span>{outcome.sticker}</span>
-          <b>Nouvel autocollant !</b>
+          <b>{ex.bonus && outcome.sticker === ex.bonus ? 'Autocollant spécial !' : 'Nouvel autocollant !'}</b>
         </div>
       ) : null}
       <div class="answers">

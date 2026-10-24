@@ -47,8 +47,8 @@ export function markLesson(id: string) {
   emit();
 }
 
-/** Enregistre un résultat ; renvoie ce qui vient d'être gagné (nouvelles étoiles, autocollant). */
-export function recordResult(ex: Exercise, stars: number): { newStars: number; sticker?: string } {
+/** Enregistre un résultat ; renvoie ce qui vient d'être gagné (nouvelles étoiles, autocollant d'étape ou spécial). */
+export function recordResult(ex: Exercise, stars: number): { newStars: number; sticker?: string; bonus?: string } {
   const before = progress.stars[ex.id] ?? 0;
   const step = STEPS.find((s) => s.exercises.some((e) => e.id === ex.id));
   const wasDone = step ? stepDone(step) : false;
@@ -61,7 +61,8 @@ export function recordResult(ex: Exercise, stars: number): { newStars: number; s
   save('progress', progress);
   emit();
   const sticker = step && !wasDone && stepDone(step) ? step.sticker : undefined;
-  return { newStars: Math.max(0, stars - before), sticker };
+  const bonus = ex.bonus && before === 0 && stars > 0 ? ex.bonus : undefined;
+  return { newStars: Math.max(0, stars - before), sticker, bonus };
 }
 
 export function resetProgress() {
@@ -86,6 +87,8 @@ export function stepShare(s: Step, p = progress) {
   return done / n;
 }
 export const stickers = (p = progress) => STEPS.filter((s) => stepDone(s, p)).map((s) => s.sticker);
+/** Autocollants spéciaux gagnés dans « Pour aller plus loin ». */
+export const bonusStickers = (p = progress) => STEPS.flatMap((s) => (s.more ?? []).filter((e) => e.bonus && (p.stars[e.id] ?? 0) > 0).map((e) => e.bonus!));
 
 export type Next = { type: 'lesson'; step: Step; id: string; title: string } | { type: 'exercise'; step: Step; ex: Exercise } | null;
 
@@ -105,6 +108,9 @@ export function after(ex: Exercise): Exercise | undefined {
   for (const s of STEPS) {
     const i = s.exercises.findIndex((e) => e.id === ex.id);
     if (i >= 0) return s.exercises[i + 1];
+    const more = s.more ?? [];
+    const j = more.findIndex((e) => e.id === ex.id);
+    if (j >= 0) return more[j + 1];
   }
   return undefined;
 }
@@ -134,6 +140,9 @@ export function useStore() {
   }, []);
   return { progress, settings };
 }
+
+/** Défi « sans faute » : seules les 3 étoiles comptent. */
+export const finalStars = (ex: Exercise, raw: number) => (ex.perfect && raw < 3 ? 0 : raw);
 
 /** Étoiles d'un quiz : réussi à partir de `need`, 3 étoiles sans faute. */
 export function quizStars(score: number, n: number, need: number): number {
